@@ -10,6 +10,8 @@ const WAAPI_INSTANCE_ID = process.env.WAAPI_INSTANCE_ID
 const BUCKET_NAME = process.env.BUCKET_NAME
 const MONGODB_URI = process.env.MONGODB_URI
 const MELTWATER_ACCOUNT_ID = process.env.MELTWATER_ACCOUNT_ID
+const WHATSAPP_USERNAME = process.env.WHATSAPP_USERNAME
+const WHATSAPP_PASSWORD = process.env.WHATSAPP_PASSWORD
 
 const { MongoClient, ServerApiVersion } = require('mongodb')
 const uri = MONGODB_URI
@@ -243,22 +245,9 @@ const replaceStrings = async function (htmlContent) {
 const sendWhatsapp = async function (correos, mwId, subject) {
   // whatsapp con api waapi
   for (const correo of correos) {
-    //const params = {
-    //  TableName: 'push_and_whatsapp',
-    //  Item: {
-    //    notaId: mwId,
-    //    useremail: correo,
-    //    message: `https://media.controles.co.cr/informesmw/${mwId}.html`,
-    //    expirationTime: expirationTime,
-    //  },
-    //  ConditionExpression:
-    //    'attribute_not_exists(notaId) AND attribute_not_exists(useremail)',
-    //  ReturnConsumedCapacity: 'TOTAL',
-    //}
-    //console.log(params)
     try {
       // await dynamodb.put(params).promise()
-      let waapilReturn = await axios({
+      /*let waapilReturn = await axios({
         method: 'post',
         url: `https://waapi.app/api/v1/instances/${WAAPI_INSTANCE_ID}/client/action/send-message`,
         headers: {
@@ -270,8 +259,32 @@ const sendWhatsapp = async function (correos, mwId, subject) {
           chatId: correo.correo,
           message: `${subject}\\n\\nhttps://media.controles.co.cr/informesmw/${mwId}.html`,
         },
-      })
+      })*/
       //console.log('waapilReturn', waapilReturn)
+
+      const username = WHATSAPP_USERNAME
+      const password = WHATSAPP_PASSWORD
+      const basicAuth =
+        'Basic ' + Buffer.from(`${username}:${password}`).toString('base64')
+
+      const phonenumber = correo.correo
+
+      const controlesWhatsapp = axios({
+        method: 'post',
+        url: `https://whatsapp.controles.co.cr/send/message`,
+        headers: {
+          accept: 'application/json',
+          'content-type': 'application/json',
+          authorization: basicAuth,
+        },
+        data: {
+          phone: phonenumber.replace('@c.us', ''),
+          message: `${subject}\n\nhttps://media.controles.co.cr/informesmw/${mwId}.html`,
+          reply_message_id: '',
+          is_forwarded: false,
+          duration: 0,
+        },
+      })
     } catch (error) {
       // ya se envió
       console.log(error)

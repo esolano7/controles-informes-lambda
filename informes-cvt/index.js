@@ -6,6 +6,8 @@ const S3 = new AWS.S3()
 const waapi_api_key = process.env.waapi_api_key
 const waapi_instance_id = process.env.waapi_instance_id
 const bucket_name = process.env.bucket_name
+const WHATSAPP_USERNAME = process.env.WHATSAPP_USERNAME
+const WHATSAPP_PASSWORD = process.env.WHATSAPP_PASSWORD
 
 const oneMonthInSeconds = 30 * 24 * 60 * 60 // 30 days in seconds
 const expirationTime = Math.floor(Date.now() / 1000) + oneMonthInSeconds
@@ -41,23 +43,51 @@ async function sendWhatsapp(correos, idEnvio, subject) {
       //console.log(params)
       try {
         await dynamodb.put(params).promise()
-        let waapilReturn = await axios({
+        //let waapilReturn = await axios({
+        //  method: 'post',
+        //  url: `https://waapi.app/api/v1/instances/${waapi_instance_id}/client/action/send-message`,
+        //  headers: {
+        //    accept: 'application/json',
+        //    'content-type': 'application/json',
+        //    authorization: `Bearer ${waapi_api_key}`,
+        //  },
+        //  data: {
+        //    chatId: correo,
+        //    //chatId: '50688351799@c.us',
+        //    message: `${subject}\\n\\nhttps://media.controles.co.cr/informes/${idEnvio}.html`,
+        //  },
+        //})
+        //console.log('waapilReturn', waapilReturn)
+
+        const username = WHATSAPP_USERNAME
+        const password = WHATSAPP_PASSWORD
+        const basicAuth =
+          'Basic ' + Buffer.from(`${username}:${password}`).toString('base64')
+
+        const phonenumber = correo
+
+        const controlesWhatsapp = await axios({
           method: 'post',
-          url: `https://waapi.app/api/v1/instances/${waapi_instance_id}/client/action/send-message`,
+          url: `https://whatsapp.controles.co.cr/send/message`,
           headers: {
             accept: 'application/json',
             'content-type': 'application/json',
-            authorization: `Bearer ${waapi_api_key}`,
+            authorization: basicAuth,
           },
           data: {
-            chatId: correo,
-            //chatId: '50688351799@c.us',
-            message: `${subject}\\n\\nhttps://media.controles.co.cr/informes/${idEnvio}.html`,
+            phone: phonenumber.replace('@c.us', ''),
+            message: `${subject}\n\nhttps://media.controles.co.cr/informes/${idEnvio}.html`,
+            reply_message_id: '',
+            is_forwarded: false,
+            duration: 0,
           },
         })
-        console.log('waapilReturn', waapilReturn)
+        console.log('controlesWhatsapp', controlesWhatsapp.data)
       } catch (error) {
         // ya se envió
+        console.log(
+          'Si el error es ConditionalCheckFailedException: The conditional request failed, significa que ya se envió y ya se encuentra el registro del envío en dynamodb'
+        )
         console.log(error)
       }
     }
